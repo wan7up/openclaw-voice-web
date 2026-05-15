@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const replyPlaybackRate = 1.2;
+const replyPlaybackRate = 1.35;
 
 export function useSpeech() {
   const [speakingId, setSpeakingId] = useState<string | null>(null);

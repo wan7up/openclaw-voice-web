@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.18 - 2026-05-15
+
+- Increased default reply playback speed from 1.2x to 1.35x.
+
 ## 0.2.17 - 2026-05-15
 
 - Reduced touch-device bottom toolbar clearance to one composer-height offset.
