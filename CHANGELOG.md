@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.16 - 2026-05-15
+
+- Reworked mobile bottom layout to reserve a browser-toolbar clearance area on touch devices.
+- Removed sticky composer positioning in favor of a fixed grid row lifted above browser chrome.
+
 ## 0.2.15 - 2026-05-15
 
 - Added default best-effort sslip.io HTTPS setup to the one-command installer.
