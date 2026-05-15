@@ -417,7 +417,7 @@ h1 {
 
 @media (pointer: coarse) {
   :root {
-    --browser-bottom-clearance: clamp(104px, 22dvh, 190px);
+    --browser-bottom-clearance: 64px;
   }
 }
 
