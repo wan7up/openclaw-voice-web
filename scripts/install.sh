@@ -9,6 +9,8 @@ SERVICE_GROUP="${SERVICE_GROUP:-$SERVICE_USER}"
 INSTALL_WHISPER="${INSTALL_WHISPER:-1}"
 OPENCLAW_STT_MODEL="${OPENCLAW_STT_MODEL:-tiny}"
 OPENCLAW_STT_PROVIDER="${OPENCLAW_STT_PROVIDER:-faster-whisper}"
+OPENCLAW_ENABLE_SSLIP="${OPENCLAW_ENABLE_SSLIP:-1}"
+OPENCLAW_PUBLIC_DOMAIN="${OPENCLAW_PUBLIC_DOMAIN:-}"
 
 log() {
   printf '\033[1;34m[openclaw-voice-web]\033[0m %s\n' "$*"
@@ -110,8 +112,91 @@ resolve_app_path() {
   fi
 }
 
+detect_public_ip() {
+  local ip
+  ip="$(curl -fsSL --max-time 8 https://api.ipify.org 2>/dev/null || true)"
+  if printf '%s' "$ip" | grep -Eq '^[0-9]+(\.[0-9]+){3}$'; then
+    printf '%s\n' "$ip"
+    return
+  fi
+
+  ip="$(curl -fsSL --max-time 8 https://ifconfig.me/ip 2>/dev/null || true)"
+  if printf '%s' "$ip" | grep -Eq '^[0-9]+(\.[0-9]+){3}$'; then
+    printf '%s\n' "$ip"
+  fi
+}
+
+domain_from_sslip() {
+  local ip="$1"
+  printf '%s.sslip.io\n' "${ip//./-}"
+}
+
+write_nginx_site() {
+  local domain="$1"
+  local port="$2"
+  local site_path="/etc/nginx/sites-available/${SERVICE_NAME}.conf"
+  cat >"$site_path" <<EOF
+server {
+  listen 80;
+  listen [::]:80;
+  server_name ${domain};
+
+  client_max_body_size 25m;
+
+  location / {
+    proxy_pass http://127.0.0.1:${port};
+    proxy_http_version 1.1;
+    proxy_set_header Host \$host;
+    proxy_set_header X-Real-IP \$remote_addr;
+    proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto \$scheme;
+    proxy_buffering off;
+  }
+}
+EOF
+  ln -sf "$site_path" "/etc/nginx/sites-enabled/${SERVICE_NAME}.conf"
+}
+
+setup_sslip_https() {
+  local port="$1"
+  local domain="$OPENCLAW_PUBLIC_DOMAIN"
+  local public_ip=""
+
+  if [ "$OPENCLAW_ENABLE_SSLIP" != "1" ] && [ -z "$domain" ]; then
+    return
+  fi
+
+  if [ -z "$domain" ]; then
+    public_ip="$(detect_public_ip)"
+    if [ -z "$public_ip" ]; then
+      log "Could not detect public IP; skipping sslip.io HTTPS setup."
+      return
+    fi
+    domain="$(domain_from_sslip "$public_ip")"
+  fi
+
+  log "Configuring HTTPS for https://${domain}"
+  apt_install nginx certbot python3-certbot-nginx
+  write_nginx_site "$domain" "$port"
+
+  if ! nginx -t; then
+    log "nginx config test failed; skipping HTTPS setup."
+    return
+  fi
+  systemctl enable nginx >/dev/null 2>&1 || true
+  systemctl reload nginx 2>/dev/null || systemctl restart nginx
+
+  if certbot --nginx -d "$domain" --non-interactive --agree-tos --register-unsafely-without-email --redirect; then
+    HTTPS_URL="https://${domain}/"
+    log "HTTPS enabled: ${HTTPS_URL}"
+  else
+    log "Certificate request failed. Check that ports 80/443 are open and ${domain} resolves to this server."
+    HTTP_PROXY_URL="http://${domain}/"
+  fi
+}
+
 log "Installing OS dependencies"
-apt_install ca-certificates curl ffmpeg python3 python3-venv rsync
+apt_install ca-certificates curl ffmpeg openssl python3 python3-venv rsync
 install_node_if_needed
 ensure_service_user
 
@@ -209,11 +294,20 @@ systemctl is-active --quiet "${SERVICE_NAME}.service"
 
 port="$(read_env_value PORT)"
 host_ip="$(hostname -I 2>/dev/null | awk '{print $1}')"
+HTTPS_URL=""
+HTTP_PROXY_URL=""
+
+setup_sslip_https "${port:-8787}"
 
 log "Installed successfully."
 printf 'Service: %s.service\n' "$SERVICE_NAME"
 printf 'App dir: %s\n' "$APP_DIR"
 printf 'Config: %s\n' "$ENV_FILE"
+if [ -n "$HTTPS_URL" ]; then
+  printf 'URL: %s\n' "$HTTPS_URL"
+elif [ -n "$HTTP_PROXY_URL" ]; then
+  printf 'URL: %s\n' "$HTTP_PROXY_URL"
+fi
 if [ -n "$host_ip" ]; then
   printf 'URL: http://%s:%s/\n' "$host_ip" "${port:-8787}"
 else

@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.2.15 - 2026-05-15
+
+- Added default best-effort sslip.io HTTPS setup to the one-command installer.
+- The installer now detects the public IP, generates an sslip.io domain, installs nginx/certbot, and prints the HTTPS URL when certificate setup succeeds.
+- Added installer options to disable sslip.io or use a custom public domain.
+
 ## 0.2.14 - 2026-05-15
 
 - Added full Chinese installation and operation instructions to README.
