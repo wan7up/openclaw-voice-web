@@ -1,0 +1,19 @@
+[Unit]
+Description=OpenClaw Voice Web
+After=network-online.target openclaw-gateway.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+WorkingDirectory=/opt/openclaw-voice-web
+EnvironmentFile=/etc/openclaw-voice-web.env
+ExecStart=/usr/bin/node /opt/openclaw-voice-web/dist/server/index.js
+Restart=always
+RestartSec=3
+User=root
+Group=root
+NoNewPrivileges=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,11 @@
+node_modules/
+dist/
+dist-client/
+.env
+.env.local
+.openclaw-device.json
+server.log
+voice-web.password
+.ssh/
+npm-debug.log*
+*.local
