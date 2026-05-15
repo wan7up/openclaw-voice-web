@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.14 - 2026-05-15
+
+- Added full Chinese installation and operation instructions to README.
+
 ## 0.2.13 - 2026-05-15
 
 - Published GitHub install defaults for `wan7up/openclaw-voice-web`.

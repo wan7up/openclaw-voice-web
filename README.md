@@ -1,5 +1,146 @@
 # OpenClaw Voice Web
 
+[中文说明](#中文说明) | [English](#english)
+
+## 中文说明
+
+OpenClaw Voice Web 是一个部署在 OpenClaw 服务器旁边的浏览器语音/文字问答入口。
+
+适合手机浏览器、车机浏览器等场景：
+
+- 可以输入文字提问，也可以录音提问。
+- 录音上传到服务器后，由 `faster-whisper` 在服务器本地做语音识别。
+- 识别出的文字不会显示给用户，只会作为隐藏文本发给 OpenClaw。
+- OpenClaw 返回文字回答，页面正常显示。
+- 回答可以手动播放，也可以自动播放。
+- 自动播放默认开启，播放速度默认 1.2 倍。
+
+### 前提条件
+
+- 服务器已经安装并配置好 OpenClaw。
+- OpenClaw Gateway 在本机可访问，默认地址是 `ws://127.0.0.1:18789`。
+- 推荐 Debian/Ubuntu 系统。安装脚本会自动安装 Node.js、ffmpeg、Python venv 和 `faster-whisper`。
+- 建议通过 HTTPS 或可信内网地址访问，否则部分浏览器可能拒绝麦克风权限。
+
+### 一句话安装
+
+在已经安装好 OpenClaw 的服务器上执行：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wan7up/openclaw-voice-web/main/scripts/bootstrap.sh | sudo bash
+```
+
+脚本会自动从 GitHub 下载项目，然后执行安装。
+
+### 安装过程会做什么
+
+- 检查服务器是否已有 OpenClaw CLI。
+- 安装系统依赖。
+- 如果 Node.js 版本不够，会自动安装 Node.js 24.x。
+- 将项目安装到 `/opt/openclaw-voice-web`。
+- 安装 npm 依赖并构建前后端。
+- 创建 `.venv-whisper`，并安装 `faster-whisper`。
+- 生成 `/etc/openclaw-voice-web.env`。
+- 生成浏览器访问密码文件。
+- 写入并启动 systemd 服务。
+
+安装完成后，终端会输出访问地址和浏览器访问密码。
+
+### 常用配置
+
+主要配置文件：
+
+```bash
+/etc/openclaw-voice-web.env
+```
+
+常见配置：
+
+```env
+PORT=8787
+HOST=0.0.0.0
+OPENCLAW_GATEWAY_WS_URL=ws://127.0.0.1:18789
+OPENCLAW_STT_PROVIDER=faster-whisper
+OPENCLAW_STT_MODEL=tiny
+OPENCLAW_STT_LANGUAGE=zh-CN
+OPENCLAW_ACCESS_PASSWORD_FILE=voice-web.password
+```
+
+修改配置后重启：
+
+```bash
+sudo systemctl restart openclaw-voice-web.service
+```
+
+查看日志：
+
+```bash
+sudo journalctl -u openclaw-voice-web.service -f
+```
+
+### 访问密码
+
+默认密码文件：
+
+```bash
+/opt/openclaw-voice-web/voice-web.password
+```
+
+文件第一行就是浏览器访问密码。修改密码：
+
+```bash
+sudo nano /opt/openclaw-voice-web/voice-web.password
+sudo systemctl restart openclaw-voice-web.service
+```
+
+### Whisper 模型选择
+
+默认使用：
+
+```env
+OPENCLAW_STT_MODEL=tiny
+```
+
+`tiny` 速度快，适合低配服务器先跑通。  
+如果识别准确率不够，可以尝试：
+
+```bash
+OPENCLAW_STT_MODEL=base sudo -E bash -c \
+  "$(curl -fsSL https://raw.githubusercontent.com/wan7up/openclaw-voice-web/main/scripts/bootstrap.sh)"
+```
+
+或安装后编辑 `/etc/openclaw-voice-web.env`，把 `OPENCLAW_STT_MODEL=tiny` 改成 `base`，再重启服务。
+
+### 更新
+
+重新执行同一条安装命令即可：
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/wan7up/openclaw-voice-web/main/scripts/bootstrap.sh | sudo bash
+```
+
+已有的 `/etc/openclaw-voice-web.env` 和密码文件会保留。
+
+### 反向代理
+
+Nginx 示例：
+
+```bash
+deploy/nginx.example.conf
+```
+
+公网使用时建议配置 HTTPS。
+
+### 本地目录安装
+
+如果你已经把项目目录下载到了服务器，也可以在项目目录内执行：
+
+```bash
+sudo bash scripts/install.sh
+```
+
+## English
+
 OpenClaw Voice Web is a browser voice and text Q&A entrypoint that runs next to an existing OpenClaw server.
 
 It is designed for mobile and car browsers:
