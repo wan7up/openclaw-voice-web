@@ -1,7 +1,6 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const serverAudioPlaybackRate = 1;
-const browserSpeechPlaybackRate = 1.35;
 
 export function useSpeech() {
   const [speakingId, setSpeakingId] = useState<string | null>(null);
@@ -10,16 +9,8 @@ export function useSpeech() {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const unlockedRef = useRef(false);
 
-  const voices = useMemo(() => {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) return [];
-    return window.speechSynthesis.getVoices();
-  }, []);
-
   const stop = useCallback(() => {
     audioRef.current?.pause();
-    if (typeof window !== "undefined" && "speechSynthesis" in window) {
-      window.speechSynthesis.cancel();
-    }
     speakingIdRef.current = null;
     setSpeakingId(null);
   }, []);
@@ -49,10 +40,11 @@ export function useSpeech() {
         unlockedRef.current = true;
         return true;
       } catch {
-        return await speakWithBrowser(id, text);
+        finishSpeaking(id);
+        return false;
       }
     },
-    [stop, supported, voices]
+    [stop, supported]
   );
 
   const unlock = useCallback(() => {
@@ -84,49 +76,7 @@ export function useSpeech() {
     return payload.url;
   }
 
-  function speakWithBrowser(id: string, text: string): Promise<boolean> {
-    if (typeof window === "undefined" || !("speechSynthesis" in window)) {
-      finishSpeaking(id);
-      return Promise.resolve(false);
-    }
-
-    window.speechSynthesis.cancel();
-    const utterance = new SpeechSynthesisUtterance(text);
-    utterance.lang = "zh-CN";
-    utterance.rate = browserSpeechPlaybackRate;
-    const zhVoice = voices.find((voice) => voice.lang.toLowerCase().startsWith("zh"));
-    if (zhVoice) utterance.voice = zhVoice;
-    return new Promise((resolve) => {
-      const timeout = window.setTimeout(() => {
-        cleanup();
-        window.speechSynthesis.cancel();
-        resolve(false);
-      }, 1800);
-
-      const cleanup = () => {
-        window.clearTimeout(timeout);
-      };
-
-      utterance.onstart = () => {
-        cleanup();
-        speakingIdRef.current = id;
-        setSpeakingId(id);
-        resolve(true);
-      };
-      utterance.onend = () => {
-        cleanup();
-        finishSpeaking(id);
-      };
-      utterance.onerror = () => {
-        cleanup();
-        finishSpeaking(id);
-        resolve(false);
-      };
-      window.speechSynthesis.speak(utterance);
-    });
-  }
-
-function getAudioElement(): HTMLAudioElement {
+  function getAudioElement(): HTMLAudioElement {
     if (audioRef.current) return audioRef.current;
     const audio = new Audio();
     audio.preload = "auto";
