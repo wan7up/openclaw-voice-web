@@ -33,7 +33,7 @@ export function useSpeech() {
         const url = audioUrl ?? (await createServerAudioUrl(text));
         const audio = getAudioElement();
         audio.pause();
-        audio.src = url;
+        audio.src = withFreshAudioUrl(url);
         audio.currentTime = 0;
         audio.muted = false;
         audio.volume = 1;
@@ -126,7 +126,7 @@ export function useSpeech() {
     });
   }
 
-  function getAudioElement(): HTMLAudioElement {
+function getAudioElement(): HTMLAudioElement {
     if (audioRef.current) return audioRef.current;
     const audio = new Audio();
     audio.preload = "auto";
@@ -196,6 +196,11 @@ export function useSpeech() {
   }, [stop]);
 
   return { supported, speakingId, speak, stop, unlock };
+}
+
+function withFreshAudioUrl(url: string): string {
+  const separator = url.includes("?") ? "&" : "?";
+  return `${url}${separator}t=${Date.now()}`;
 }
 
 const silentAudioDataUrl =

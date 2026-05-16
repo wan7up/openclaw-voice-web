@@ -281,7 +281,7 @@ app.get("/api/tts/:id", (request, response) => {
   }
 
   response.type(record.mimeType);
-  response.setHeader("Cache-Control", "private, max-age=1800");
+  response.setHeader("Cache-Control", "no-store, max-age=0");
   response.sendFile(record.filePath, { dotfiles: "allow" }, (error) => {
     if (!error) return;
     console.warn(JSON.stringify({ event: "tts-send-error", id, error: serializeError(error) }));
@@ -538,6 +538,7 @@ async function warmReplyAudio(sessionKey: string, event: ChatEvent & { text?: st
       sessionKey,
       runId: event.runId,
       cached: result.cached,
+      speed: config.ttsSpeed,
       latencyMs: Date.now() - startedAt
     })
   );
@@ -580,6 +581,7 @@ async function createOrGetTtsAudioUncached(id: string, text: string): Promise<Tt
   await applyTtsSpeed(config, filePath);
   const mimeType = mimeForAudioPath(filePath);
   ttsFiles.set(id, { filePath, mimeType, createdAt: Date.now() });
+  console.info(JSON.stringify({ event: "tts-created", id, speed: config.ttsSpeed, mimeType }));
   scheduleTempAudioCleanup(id, filePath);
   return { id, url: `/api/tts/${id}`, mimeType, cached: false };
 }
