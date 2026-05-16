@@ -1,6 +1,6 @@
 import { execFile } from "node:child_process";
 import crypto from "node:crypto";
-import { mkdir, readFile, stat, unlink, writeFile } from "node:fs/promises";
+import { mkdir, readFile, rename, stat, unlink, writeFile } from "node:fs/promises";
 import path from "node:path";
 import { promisify } from "node:util";
 import type { AppConfig } from "./config.js";
@@ -201,6 +201,42 @@ export async function synthesizeWithOpenClaw(params: {
     args.push("--model", params.config.ttsModel);
   }
   return runJsonCommand(params.config.openclawCli, args, params.config.voiceCommandTimeoutMs);
+}
+
+export async function applyTtsSpeed(config: AppConfig, filePath: string): Promise<void> {
+  const speed = config.ttsSpeed;
+  if (Math.abs(speed - 1) < 0.01) return;
+
+  const outputPath = path.join(path.dirname(filePath), `speed-${Date.now()}-${crypto.randomUUID()}.mp3`);
+  try {
+    await execFileAsync(
+      "ffmpeg",
+      [
+        "-hide_banner",
+        "-loglevel",
+        "error",
+        "-y",
+        "-i",
+        filePath,
+        "-filter:a",
+        buildAtempoFilter(speed),
+        "-vn",
+        "-codec:a",
+        "libmp3lame",
+        "-b:a",
+        "48k",
+        outputPath
+      ],
+      {
+        timeout: config.voiceCommandTimeoutMs,
+        maxBuffer: 2 * 1024 * 1024
+      }
+    );
+    await rename(outputPath, filePath);
+  } catch (error) {
+    await safeUnlink(outputPath);
+    throw error;
+  }
 }
 
 export async function safeUnlink(filePath: string): Promise<void> {
@@ -444,6 +480,21 @@ function normalizeBaseUrl(value: string): string {
 
 function normalizeLanguage(value: string): string {
   return value.split("-")[0] || value;
+}
+
+function buildAtempoFilter(speed: number): string {
+  const filters: string[] = [];
+  let remaining = speed;
+  while (remaining > 2) {
+    filters.push("atempo=2");
+    remaining /= 2;
+  }
+  while (remaining < 0.5) {
+    filters.push("atempo=0.5");
+    remaining /= 0.5;
+  }
+  filters.push(`atempo=${remaining.toFixed(3).replace(/0+$/, "").replace(/\.$/, "")}`);
+  return filters.join(",");
 }
 
 async function runJsonCommand(

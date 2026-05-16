@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-const replyPlaybackRate = 1.35;
+const serverAudioPlaybackRate = 1;
+const browserSpeechPlaybackRate = 1.35;
 
 export function useSpeech() {
   const [speakingId, setSpeakingId] = useState<string | null>(null);
@@ -36,7 +37,7 @@ export function useSpeech() {
         audio.currentTime = 0;
         audio.muted = false;
         audio.volume = 1;
-        audio.playbackRate = replyPlaybackRate;
+        audio.playbackRate = serverAudioPlaybackRate;
         audio.preload = "auto";
         audio.onended = () => finishSpeaking(id);
         audio.onerror = () => finishSpeaking(id);
@@ -92,7 +93,7 @@ export function useSpeech() {
     window.speechSynthesis.cancel();
     const utterance = new SpeechSynthesisUtterance(text);
     utterance.lang = "zh-CN";
-    utterance.rate = replyPlaybackRate;
+    utterance.rate = browserSpeechPlaybackRate;
     const zhVoice = voices.find((voice) => voice.lang.toLowerCase().startsWith("zh"));
     if (zhVoice) utterance.voice = zhVoice;
     return new Promise((resolve) => {
@@ -129,7 +130,7 @@ export function useSpeech() {
     if (audioRef.current) return audioRef.current;
     const audio = new Audio();
     audio.preload = "auto";
-    audio.playbackRate = replyPlaybackRate;
+    audio.playbackRate = serverAudioPlaybackRate;
     audio.setAttribute("playsinline", "true");
     audioRef.current = audio;
     return audio;

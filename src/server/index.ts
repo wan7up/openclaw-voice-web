@@ -9,6 +9,7 @@ import multer from "multer";
 import {
   VoiceCapabilityError,
   analyzeAudio,
+  applyTtsSpeed,
   ensureVoiceDir,
   mimeForAudioPath,
   safeUnlink,
@@ -576,6 +577,7 @@ async function createOrGetTtsAudioUncached(id: string, text: string): Promise<Tt
   if (!existsSync(filePath)) {
     throw new Error("OpenClaw TTS did not create an audio file");
   }
+  await applyTtsSpeed(config, filePath);
   const mimeType = mimeForAudioPath(filePath);
   ttsFiles.set(id, { filePath, mimeType, createdAt: Date.now() });
   scheduleTempAudioCleanup(id, filePath);
@@ -585,7 +587,14 @@ async function createOrGetTtsAudioUncached(id: string, text: string): Promise<Tt
 function createTtsCacheId(text: string): string {
   const hash = crypto
     .createHash("sha256")
-    .update(JSON.stringify({ text, voice: config.ttsVoice ?? "", model: config.ttsModel ?? "" }))
+    .update(
+      JSON.stringify({
+        text,
+        voice: config.ttsVoice ?? "",
+        model: config.ttsModel ?? "",
+        speed: config.ttsSpeed
+      })
+    )
     .digest("hex")
     .slice(0, 32);
   return `tts-${hash}`;

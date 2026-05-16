@@ -18,6 +18,7 @@ export type AppConfig = {
   voiceTempDir: string;
   voiceCommandTimeoutMs: number;
   ttsCacheTtlMs: number;
+  ttsSpeed: number;
   sttLanguage: string;
   sttProvider: "openclaw" | "openai-audio" | "openai-chat-audio" | "faster-whisper";
   sttApiBaseUrl?: string;
@@ -76,6 +77,7 @@ export function loadConfig(): AppConfig {
     voiceTempDir: readString("OPENCLAW_VOICE_TMP_DIR", "voice-web-cache"),
     voiceCommandTimeoutMs: readNumber("OPENCLAW_VOICE_COMMAND_TIMEOUT_MS", 120_000, 1_000),
     ttsCacheTtlMs: readNumber("OPENCLAW_TTS_CACHE_TTL_SECONDS", 30 * 60, 60) * 1000,
+    ttsSpeed: readTtsSpeed(),
     sttLanguage: readString("OPENCLAW_STT_LANGUAGE", "zh-CN"),
     sttProvider,
     sttApiBaseUrl: readOptionalString("OPENCLAW_STT_API_BASE_URL"),
@@ -90,6 +92,14 @@ export function loadConfig(): AppConfig {
     ttsVoice: readOptionalString("OPENCLAW_TTS_VOICE"),
     ttsModel: readOptionalString("OPENCLAW_TTS_MODEL")
   };
+}
+
+function readTtsSpeed(): number {
+  const value = readNumber("OPENCLAW_TTS_SPEED", 1.35, 0.25);
+  if (value > 4) {
+    throw new Error("OPENCLAW_TTS_SPEED must be <= 4");
+  }
+  return value;
 }
 
 function readSttProvider(): AppConfig["sttProvider"] {

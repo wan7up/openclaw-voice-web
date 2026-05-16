@@ -1,6 +1,6 @@
 {
   "name": "openclaw-voice-web",
-  "version": "0.2.18",
+  "version": "0.2.19",
   "private": true,
   "type": "module",
   "description": "A deployable browser voice and text Q&A entrypoint for OpenClaw.",
